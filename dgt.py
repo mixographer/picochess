@@ -33,6 +33,7 @@ try:
 except ImportError:  # Python 3.3 support
     import asyncio34 as asyncio
 
+serialDisplay = serial.Serial('/dev/tty.usbmodemfd131', 9600, timeout=0)
 
 @enum.unique
 class Commands(enum.Enum):
@@ -431,6 +432,7 @@ class DGTBoard(Observable, Display, threading.Thread):
                             self.bit_board.set_fen(self.last_fen)
                             # logging.info("Move is {0}".format(self.bit_board.san(message.move)))
                             self.display_on_dgt_3000(self.bit_board.san(self.last_move), False)
+                            self.display_on_serial(self.bit_board.san(self.last_move), False)
 
                         if self.dgt_clock_menu == Menu.SETUP_POSITION_MENU:
                             self.setup_to_move = chess.WHITE if self.setup_to_move == chess.BLACK else chess.BLACK
@@ -544,6 +546,7 @@ class DGTBoard(Observable, Display, threading.Thread):
                         Display.show(Event.LEVEL, level=level)
                         self.display_on_dgt_xl('lvl ' + str(level), True)
                         self.display_on_dgt_3000('level '+ str(level), True)
+                        self.display_on_serial('level '+ str(level), True)
                     elif fen == "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR":  # New game
                         logging.debug("New game")
                         self.fire(Event.NEW_GAME)
@@ -555,6 +558,7 @@ class DGTBoard(Observable, Display, threading.Thread):
 
                         self.display_on_dgt_xl(get_opening_books()[book_index][0], True)
                         self.display_on_dgt_3000(get_opening_books()[book_index][0], True)
+                        self.display_on_serial(get_opening_books()[book_index][0], True)
                     elif fen in mode_map:  # Set interaction mode
                         logging.debug("Interaction mode [%s]", mode_map[fen])
                         self.fire(Event.SET_MODE, mode=mode_map[fen])
@@ -562,6 +566,7 @@ class DGTBoard(Observable, Display, threading.Thread):
 
                         self.display_on_dgt_xl(('book', 'analys', 'game', 'kibitz', 'observ', 'black', 'white', 'black', 'white')[mode_map[fen].value], True)
                         self.display_on_dgt_3000(('book', 'analyse', 'game', 'kibitz', 'observe', 'black', 'white', 'black', 'white')[mode_map[fen].value], True)
+                        self.display_on_serial(('book', 'analyse', 'game', 'kibitz', 'observe', 'black', 'white', 'black', 'white')[mode_map[fen].value], True)
                     elif fen in time_control_map:
                         logging.debug("Setting time control %s", time_control_map[fen].mode)
                         self.fire(Event.SET_TIME_CONTROL, time_control=time_control_map[fen])
@@ -569,10 +574,12 @@ class DGTBoard(Observable, Display, threading.Thread):
 
                         self.display_on_dgt_xl(dgt_xl_time_control_list[list(time_control_map.keys()).index(fen)], True)
                         self.display_on_dgt_3000(dgt_xl_time_control_list[list(time_control_map.keys()).index(fen)], True)
+                        self.display_on_serial(dgt_xl_time_control_list[list(time_control_map.keys()).index(fen)], True)
                     elif fen in shutdown_map:
                         self.fire(Event.SHUTDOWN)
                         self.display_on_dgt_xl('powoff', True)
                         self.display_on_dgt_3000('poweroff', True)
+                        self.display_on_serial('poweroff', True)
                     else:
                         logging.debug("Fen")
                         self.fire(Event.FEN, fen=fen)
@@ -599,12 +606,19 @@ class DGTBoard(Observable, Display, threading.Thread):
             text = bytes(text, 'utf-8')
             self.write([Commands.DGT_CLOCK_MESSAGE, 0x0c, Clock.DGT_CMD_CLOCK_START_MESSAGE, Clock.DGT_CMD_CLOCK_ASCII,
                         text[0], text[1], text[2], text[3], text[4], text[5], text[6], text[7], 0x03 if beep else 0x01, Clock.DGT_CMD_CLOCK_END_MESSAGE])
+                        
+    def display_on_serial(self, text, beep=False, force=False):
+        while len(text) < 8: text += ' '
+        if len(text) > 8: logging.warning('DGT 3000 clock message too long [%s]', text)
+        text = bytes(text, 'utf-8')   
+        serialDisplay.write(text[0], text[1], text[2], text[3], text[4], text[5], text[6], text[7],)                      
 
     def display_on_dgt_clock(self, text, beep=False, dgt_3000_text=None):
         if self.enable_dgt_3000:
             if dgt_3000_text:
                 text = dgt_3000_text
             self.display_on_dgt_3000(text, beep=beep)
+            self.display_on_serial(text, beep=beep)
         else:
             self.display_on_dgt_xl(text, beep=beep)
 
@@ -652,16 +666,19 @@ class DGTBoard(Observable, Display, threading.Thread):
                         self.bit_board.set_fen(message.fen)
                         # logging.info("Move is {0}".format(self.bit_board.san(message.move)))
                         self.display_on_dgt_3000(self.bit_board.san(message.move), True)
+                        self.display_on_serial(self.bit_board.san(message.move), True)
                         self.light_squares_revelation_board((uci_move[0:2], uci_move[2:4]))
                         break
                     if case(Message.START_NEW_GAME):
                         self.display_on_dgt_xl('newgam', True)
                         self.display_on_dgt_3000('new game', True)
+                        self.display_on_serial('new game', True)
                         self.clear_light_revelation_board()
                         break
                     if case(Message.COMPUTER_MOVE_DONE_ON_BOARD):
                         self.display_on_dgt_xl('ok', True)
                         self.display_on_dgt_3000('ok', True)
+                        self.display_on_serial('ok', True)
                         self.clear_light_revelation_board()
                         break
                     if case(Message.REVIEW_MODE_MOVE):
@@ -672,11 +689,13 @@ class DGTBoard(Observable, Display, threading.Thread):
                         # Dont beep when reviewing a game
                         self.display_on_dgt_xl(' ' + uci_move, False)
                         self.display_on_dgt_3000(self.bit_board.san(message.move), False)
+                        self.display_on_serial(self.bit_board.san(message.move), False)
 
                         break
                     if case(Message.USER_TAKE_BACK):
                         self.display_on_dgt_xl('takbak', True)
                         self.display_on_dgt_3000('takeback', True)
+                        self.display_on_serial('takeback', True)
                         break
                     if case(Message.RUN_CLOCK):
                         tc = message.time_control
@@ -692,11 +711,13 @@ class DGTBoard(Observable, Display, threading.Thread):
                                    w_hms[0], w_hms[1], w_hms[2], b_hms[0], b_hms[1], b_hms[2],
                                    side, Clock.DGT_CMD_CLOCK_END_MESSAGE])
                         self.write([Commands.DGT_CLOCK_MESSAGE, 0x03, Clock.DGT_CMD_CLOCK_START_MESSAGE, Clock.DGT_CMD_CLOCK_END, Clock.DGT_CMD_CLOCK_END_MESSAGE])
+                        serialDisplay(w_hms[0], w_hms[1], w_hms[2], b_hms[0], b_hms[1], b_hms[2])
                         break
                     if case(Message.GAME_ENDS):
                         time.sleep(3)  # Let the move displayed on lock
                         self.display_on_dgt_xl(message.result.value, beep=True)
                         self.display_on_dgt_3000(message.result.value, beep=True)
+                        self.display_on_serial(message.result.value, beep=True)
                         break
                     if case():  # Default
                         pass
