@@ -33,7 +33,7 @@ try:
 except ImportError:  # Python 3.3 support
     import asyncio34 as asyncio
 
-serialDisplay = serial.Serial('/dev/tty.usbmodemfd131', 9600, timeout=0)
+serialDisplay = pyserial.Serial('/dev/ttyACM0', 9600, timeout=0)
 
 @enum.unique
 class Commands(enum.Enum):
@@ -611,7 +611,7 @@ class DGTBoard(Observable, Display, threading.Thread):
         while len(text) < 8: text += ' '
         if len(text) > 8: logging.warning('DGT 3000 clock message too long [%s]', text)
         text = bytes(text, 'utf-8')   
-        serialDisplay.write(text[0], text[1], text[2], text[3], text[4], text[5], text[6], text[7],)                      
+        serialDisplay.write(text, beep=beep)                      
 
     def display_on_dgt_clock(self, text, beep=False, dgt_3000_text=None):
         if self.enable_dgt_3000:
