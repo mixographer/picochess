@@ -611,7 +611,9 @@ class DGTBoard(Observable, Display, threading.Thread):
         while len(text) < 8: text += ' '
         if len(text) > 8: logging.warning('DGT 3000 clock message too long [%s]', text)
         text = bytes(text, 'utf-8')   
-        serialDisplay.write(text, beep=beep)                      
+        serialDisplay.write(text, beep=False)                      
+        serialDisplay.write(b'        ')
+        serialDisplay.write(b'\n')
 
     def display_on_dgt_clock(self, text, beep=False, dgt_3000_text=None):
         if self.enable_dgt_3000:
