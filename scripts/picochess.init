@@ -9,10 +9,10 @@ touch /var/lock/picochess
 case "$1" in
   start)
     echo "Starting picochess"
-      if [ -e "/dev/ttyACM0" ]
-      then
-         dgt_port="/dev/ttyACM0"
-      elif [ -e "/dev/ttyUSB0" ]
+      #if [ -e "/dev/ttyACM0" ]
+      #then
+      #   dgt_port="/dev/ttyACM0"
+      if [ -e "/dev/ttyUSB0" ]
       then
          dgt_port="/dev/ttyUSB0"
       elif [ -e "/dev/rfcomm0" ]
