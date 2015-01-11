@@ -600,21 +600,11 @@ class DGTBoard(Observable, Display, threading.Thread):
             text = bytes(text, 'utf-8')
             self.write([Commands.DGT_CLOCK_MESSAGE, 0x0c, Clock.DGT_CMD_CLOCK_START_MESSAGE, Clock.DGT_CMD_CLOCK_ASCII,
                         text[0], text[1], text[2], text[3], text[4], text[5], text[6], text[7], 0x03 if beep else 0x01, Clock.DGT_CMD_CLOCK_END_MESSAGE])
-<<<<<<< HEAD
             serialDisplay.write(text)
             serialDisplay.write(b'        ')
             serialDisplay.write(b'\n')
             serialDisplay.flush()
-=======
                         
-    def display_on_serial(self, text, beep=False, force=False):
-        while len(text) < 8: text += ' '
-        if len(text) > 8: logging.warning('DGT 3000 clock message too long [%s]', text)
-        text = bytes(text, 'utf-8')   
-        serialDisplay.write(text, beep=False)                      
-        serialDisplay.write(b'        ')
-        serialDisplay.write(b'\n')
->>>>>>> a700a78bb3594f5c86f48571248552f9609bcefc
 
     def display_on_dgt_clock(self, text, beep=False, dgt_3000_text=None):
         if self.enable_dgt_3000:
