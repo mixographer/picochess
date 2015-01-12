@@ -54,7 +54,6 @@ def main():
     parser.add_argument("-mk", "--email-key", type=str, help="key used to send emails", default=None)
     parser.add_argument("-uci", "--uci-option", type=str, help="pass an UCI option to the engine (name;value)", default=None)
     parser.add_argument("-dgt3000", "--dgt-3000-clock", action='store_true', help="use dgt 3000 clock")
-    parser.add_argument("-sd", "--serial_display", action='store_true', help="use a serial display with dgt 3000 clock")
     args = parser.parse_args()
 
     # Enable logging
